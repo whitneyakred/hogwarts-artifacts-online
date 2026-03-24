@@ -70,4 +70,6 @@ public class HogwartsUser implements Serializable {
         this.roles = roles;
     }
 
+
+
 }
