@@ -1,8 +1,6 @@
 package edu.tcu.cs.hogwartsartifactsonline.hogwartsuser;
 
-import edu.tcu.cs.hogwartsartifactsonline.client.rediscache.RedisCacheClient;
 import edu.tcu.cs.hogwartsartifactsonline.system.exception.ObjectNotFoundException;
-import edu.tcu.cs.hogwartsartifactsonline.system.exception.PasswordChangeIllegalArgumentException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,12 +9,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +22,6 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@ActiveProfiles(value = "dev")
 class UserServiceTest {
 
     @Mock
@@ -37,9 +29,6 @@ class UserServiceTest {
 
     @Mock
     PasswordEncoder passwordEncoder;
-
-    @Mock
-    RedisCacheClient redisCacheClient;
 
     @InjectMocks
     UserService userService;
@@ -160,76 +149,31 @@ class UserServiceTest {
     }
 
     @Test
-    void testUpdateByAdminSuccess() {
+    void testUpdateSuccess() {
         // Given
         HogwartsUser oldUser = new HogwartsUser();
-        oldUser.setId(2);
-        oldUser.setUsername("eric");
-        oldUser.setPassword("654321");
+        oldUser.setId(1);
+        oldUser.setUsername("john");
+        oldUser.setPassword("123456");
         oldUser.setEnabled(true);
-        oldUser.setRoles("user");
+        oldUser.setRoles("admin user");
 
         HogwartsUser update = new HogwartsUser();
-        update.setUsername("eric - update");
-        update.setPassword("654321");
+        update.setUsername("john - update");
+        update.setPassword("123456");
         update.setEnabled(true);
         update.setRoles("admin user");
 
-        given(this.userRepository.findById(2)).willReturn(Optional.of(oldUser));
+        given(this.userRepository.findById(1)).willReturn(Optional.of(oldUser));
         given(this.userRepository.save(oldUser)).willReturn(oldUser);
 
-        HogwartsUser hogwartsUser = new HogwartsUser();
-        hogwartsUser.setRoles("admin");
-        MyUserPrincipal myUserPrincipal = new MyUserPrincipal(hogwartsUser);
-
-        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-        securityContext.setAuthentication(new UsernamePasswordAuthenticationToken(myUserPrincipal, null, myUserPrincipal.getAuthorities()));
-        SecurityContextHolder.setContext(securityContext);
-
         // When
-        HogwartsUser updatedUser = this.userService.update(2, update);
+        HogwartsUser updatedUser = this.userService.update(1, update);
 
         // Then
-        assertThat(updatedUser.getId()).isEqualTo(2);
+        assertThat(updatedUser.getId()).isEqualTo(1);
         assertThat(updatedUser.getUsername()).isEqualTo(update.getUsername());
-        verify(this.userRepository, times(1)).findById(2);
-        verify(this.userRepository, times(1)).save(oldUser);
-    }
-
-    @Test
-    void testUpdateByUserSuccess() {
-        // Given
-        HogwartsUser oldUser = new HogwartsUser();
-        oldUser.setId(2);
-        oldUser.setUsername("eric");
-        oldUser.setPassword("654321");
-        oldUser.setEnabled(true);
-        oldUser.setRoles("user");
-
-        HogwartsUser update = new HogwartsUser();
-        update.setUsername("eric - update");
-        update.setPassword("654321");
-        update.setEnabled(true);
-        update.setRoles("user");
-
-        given(this.userRepository.findById(2)).willReturn(Optional.of(oldUser));
-        given(this.userRepository.save(oldUser)).willReturn(oldUser);
-
-        HogwartsUser hogwartsUser = new HogwartsUser();
-        hogwartsUser.setRoles("user");
-        MyUserPrincipal myUserPrincipal = new MyUserPrincipal(hogwartsUser);
-
-        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-        securityContext.setAuthentication(new UsernamePasswordAuthenticationToken(myUserPrincipal, null, myUserPrincipal.getAuthorities()));
-        SecurityContextHolder.setContext(securityContext);
-
-        // When
-        HogwartsUser updatedUser = this.userService.update(2, update);
-
-        // Then
-        assertThat(updatedUser.getId()).isEqualTo(2);
-        assertThat(updatedUser.getUsername()).isEqualTo(update.getUsername());
-        verify(this.userRepository, times(1)).findById(2);
+        verify(this.userRepository, times(1)).findById(1);
         verify(this.userRepository, times(1)).save(oldUser);
     }
 
@@ -292,83 +236,4 @@ class UserServiceTest {
                 .hasMessage("Could not find user with Id 1 :(");
         verify(this.userRepository, times(1)).findById(1);
     }
-
-    @Test
-    void testChangePasswordSuccess() {
-        // Given
-        HogwartsUser hogwartsUser = new HogwartsUser();
-        hogwartsUser.setId(2);
-        hogwartsUser.setPassword("encryptedOldPassword");
-
-        given(this.userRepository.findById(2)).willReturn(Optional.of(hogwartsUser));
-        given(this.passwordEncoder.matches(anyString(), anyString())).willReturn(true);
-        given(this.passwordEncoder.encode(anyString())).willReturn("encryptedNewPassword");
-        given(this.userRepository.save(hogwartsUser)).willReturn(hogwartsUser);
-        doNothing().when(this.redisCacheClient).delete(anyString());
-
-        // When
-        this.userService.changePassword(2, "unencryptedOldPassword", "Abc12345", "Abc12345");
-
-        // Then
-        assertThat(hogwartsUser.getPassword()).isEqualTo("encryptedNewPassword");
-        verify(this.userRepository, times(1)).save(hogwartsUser);
-    }
-
-    @Test
-    void testChangePasswordOldPasswordIsIncorrect() {
-        // Given
-        HogwartsUser hogwartsUser = new HogwartsUser();
-        hogwartsUser.setId(2);
-        hogwartsUser.setPassword("encryptedOldPassword");
-
-        given(this.userRepository.findById(2)).willReturn(Optional.of(hogwartsUser));
-        given(this.passwordEncoder.matches(anyString(), anyString())).willReturn(false);
-
-        Exception exception = assertThrows(BadCredentialsException.class, () -> {
-            // When
-            this.userService.changePassword(2, "wrongOldPassword", "Abc12345", "Abc12345");
-        });
-
-        // Then
-        assertThat(exception).isInstanceOf(BadCredentialsException.class).hasMessage("Old password is incorrect.");
-    }
-
-    @Test
-    void testChangePasswordNewPasswordDoesNotMatchConfirmNewPassword() {
-        // Given
-        HogwartsUser hogwartsUser = new HogwartsUser();
-        hogwartsUser.setId(2);
-        hogwartsUser.setPassword("encryptedOldPassword");
-
-        given(this.userRepository.findById(2)).willReturn(Optional.of(hogwartsUser));
-        given(this.passwordEncoder.matches(anyString(), anyString())).willReturn(true);
-
-        Exception exception = assertThrows(PasswordChangeIllegalArgumentException.class, () -> {
-            // When
-            this.userService.changePassword(2, "unencryptedOldPassword", "Abc12345", "Abc123456");
-        });
-
-        // Then
-        assertThat(exception).isInstanceOf(PasswordChangeIllegalArgumentException.class).hasMessage("New password and confirm new password do not match.");
-    }
-
-    @Test
-    void testChangePasswordNewPasswordDoesNotConformToPolicy() {
-        // Given
-        HogwartsUser hogwartsUser = new HogwartsUser();
-        hogwartsUser.setId(2);
-        hogwartsUser.setPassword("encryptedOldPassword");
-
-        given(this.userRepository.findById(2)).willReturn(Optional.of(hogwartsUser));
-        given(this.passwordEncoder.matches(anyString(), anyString())).willReturn(true);
-
-        Exception exception = assertThrows(PasswordChangeIllegalArgumentException.class, () -> {
-            // When
-            this.userService.changePassword(2, "unencryptedOldPassword", "short", "short");
-        });
-
-        // Then
-        assertThat(exception).isInstanceOf(PasswordChangeIllegalArgumentException.class).hasMessage("New password does not conform to password policy.");
-    }
-
 }

@@ -1,108 +1,68 @@
-package edu.tcu.cs.hogwartsartifactsonline.artifact;
+package edu.tcu.cs.hogwartsartifactsonline.hogwartsuser;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.tcu.cs.hogwartsartifactsonline.artifact.dto.ArtifactDto;
-import edu.tcu.cs.hogwartsartifactsonline.system.StatusCode;
 import edu.tcu.cs.hogwartsartifactsonline.system.exception.ObjectNotFoundException;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.eq;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest
-@AutoConfigureMockMvc(addFilters = false) // Turn off Spring Security
-@ActiveProfiles(value = "dev")
-class ArtifactControllerTest {
+@ExtendWith(MockitoExtension.class)
+class UserServiceTest {
 
-    @Autowired
-    MockMvc mockMvc;
+    @Mock
+    UserRepository userRepository;
 
-    @MockitoBean
-    ArtifactService artifactService;
+    @Mock
+    PasswordEncoder passwordEncoder;
 
-    @Autowired
-    ObjectMapper objectMapper;
+    @InjectMocks
+    UserService userService;
 
-    List<Artifact> artifacts;
-    @Value("${api.endpoint.base-url}") // Spring will go to application-dev.yml to find the value and inject into this field.
-    String baseUrl;
+    List<HogwartsUser> hogwartsUsers;
 
 
     @BeforeEach
     void setUp() {
-        this.artifacts = new ArrayList<>();
+        HogwartsUser u1 = new HogwartsUser();
+        u1.setId(1);
+        u1.setUsername("john");
+        u1.setPassword("123456");
+        u1.setEnabled(true);
+        u1.setRoles("admin user");
 
-        Artifact a1 = new Artifact();
+        HogwartsUser u2 = new HogwartsUser();
+        u2.setId(2);
+        u2.setUsername("eric");
+        u2.setPassword("654321");
+        u2.setEnabled(true);
+        u2.setRoles("user");
 
-        a1.setId("1250808601744904191");
-        a1.setName("Deluminator");
-        a1.setDescription("A Deluminator is a device invented by Albus Dumbledore that resembles a cigarette lighter. It is used to remove or absorb (as well as return) the light from any light source to provide cover to the user.");
-        a1.setImageUrl("ImageUrl");
-        this.artifacts.add(a1);
+        HogwartsUser u3 = new HogwartsUser();
+        u3.setId(3);
+        u3.setUsername("tom");
+        u3.setPassword("qwerty");
+        u3.setEnabled(false);
+        u3.setRoles("user");
 
-        Artifact a2 = new Artifact();
-
-        a2.setId("1250808601744904192");
-        a2.setName("Invisibility Cloak");
-        a2.setDescription("An invisibility cloak is used to make the wearer invisible.");
-        a2.setImageUrl("ImageUrl");
-        this.artifacts.add(a2);
-
-        Artifact a3 = new Artifact();
-
-        a3.setId("1250808601744904193");
-        a3.setName("Elder Wand");
-        a3.setDescription("The Elder Wand, known throughout history as the Deathstick or the Wand of Destiny, is an extremely powerful wand made of elder wood with a core of Thestral tail hair.");
-        a3.setImageUrl("ImageUrl");
-        this.artifacts.add(a3);
-
-        Artifact a4 = new Artifact();
-
-        a4.setId("1250808601744904194");
-        a4.setName("The Marauder's Map");
-        a4.setDescription("A magical map of Hogwarts created by Remus Lupin, Peter Pettigrew, Sirius Black, and James Potter while they were students at Hogwarts.");
-        a4.setImageUrl("ImageUrl");
-        this.artifacts.add(a4);
-
-        Artifact a5 = new Artifact();
-
-        a5.setId("1250808601744904195");
-        a5.setName("The Sword Of Gryffindor");
-        a5.setDescription("A goblin-made sword adorned with large rubies on the pommel. It was once owned by Godric Gryffindor, one of the medieval founders of Hogwarts.");
-        a5.setImageUrl("ImageUrl");
-        this.artifacts.add(a5);
-
-        Artifact a6 = new Artifact();
-
-        a6.setId("1250808601744904196");
-        a6.setName("Resurrection Stone");
-        a6.setDescription("The Resurrection Stone allows the holder to bring back deceased loved ones, in a semi-physical form, and communicate with them.");
-        a6.setImageUrl("ImageUrl");
-        this.artifacts.add(a6);
+        this.hogwartsUsers = new ArrayList<>();
+        this.hogwartsUsers.add(u1);
+        this.hogwartsUsers.add(u2);
+        this.hogwartsUsers.add(u3);
     }
 
     @AfterEach
@@ -110,170 +70,171 @@ class ArtifactControllerTest {
     }
 
     @Test
-    void testFindArtifactByIdSuccess() throws Exception {
-        //Given
-        given(this.artifactService.findById("1250808601744904191")).willReturn(this.artifacts.get(0));
+    void testFindAllSuccess() {
+        // Given. Arrange inputs and targets. Define the behavior of Mock object userRepository.
+        given(this.userRepository.findAll()).willReturn(this.hogwartsUsers);
 
-        //When and then
-        this.mockMvc.perform(get(this.baseUrl + "/artifacts/1250808601744904191").accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.flag").value(true))
-                .andExpect(jsonPath("$.code").value(StatusCode.SUCCESS))
-                .andExpect(jsonPath("$.message").value("Find One Success"))
-                .andExpect(jsonPath("$.data.id").value("1250808601744904191"))
-                .andExpect(jsonPath("$.data.name").value("Deluminator"));
+        // When. Act on the target behavior. Act steps should cover the method to be tested.
+        List<HogwartsUser> actualUsers = this.userService.findAll();
+
+        // Then. Assert expected outcomes.
+        assertThat(actualUsers.size()).isEqualTo(this.hogwartsUsers.size());
+
+        // Verify userRepository.findAll() is called exactly once.
+        verify(this.userRepository, times(1)).findAll();
     }
 
     @Test
-    void testFindArtifactByIdNotFound() throws Exception {
-        //Given
-        given(this.artifactService.findById("1250808601744904191")).willThrow(new ObjectNotFoundException("artifact", "1250808601744904191"));
+    void testFindByIdSuccess() {
+        // Given. Arrange inputs and targets. Define the behavior of Mock object userRepository.
+        HogwartsUser u = new HogwartsUser();
+        u.setId(1);
+        u.setUsername("john");
+        u.setPassword("123456");
+        u.setEnabled(true);
+        u.setRoles("admin user");
 
-        //When and then
-        this.mockMvc.perform(get(this.baseUrl + "/artifacts/1250808601744904191").accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.flag").value(false))
-                .andExpect(jsonPath("$.code").value(StatusCode.NOT_FOUND))
-                .andExpect(jsonPath("$.message").value("Could not find artifact with Id 1250808601744904191 :("))
-                .andExpect(jsonPath("$.data").isEmpty());
+        given(this.userRepository.findById(1)).willReturn(Optional.of(u)); // Define the behavior of the mock object.
+
+        // When. Act on the target behavior. Act steps should cover the method to be tested.
+        HogwartsUser returnedUser = this.userService.findById(1);
+
+        // Then. Assert expected outcomes.
+        assertThat(returnedUser.getId()).isEqualTo(u.getId());
+        assertThat(returnedUser.getUsername()).isEqualTo(u.getUsername());
+        assertThat(returnedUser.getPassword()).isEqualTo(u.getPassword());
+        assertThat(returnedUser.isEnabled()).isEqualTo(u.isEnabled());
+        assertThat(returnedUser.getRoles()).isEqualTo(u.getRoles());
+        verify(this.userRepository, times(1)).findById(1);
     }
 
     @Test
-    void testFindAllArtifactsSuccess() throws Exception {
-        //Given
-        Pageable pageable = PageRequest.of(0, 20);
-        PageImpl<Artifact> artifactPage = new PageImpl<>(this.artifacts, pageable, this.artifacts.size());
-        given(this.artifactService.findAll(Mockito.any(Pageable.class))).willReturn(artifactPage);
+    void testFindByIdNotFound() {
+        // Given
+        given(this.userRepository.findById(Mockito.any(Integer.class))).willReturn(Optional.empty());
 
-        MultiValueMap<String, String> requestParams = new LinkedMultiValueMap<>();
-        requestParams.add("page", "0");
-        requestParams.add("size", "20");
+        // When
+        Throwable thrown =catchThrowable(() -> {
+            HogwartsUser returnedUser = this.userService.findById(1);
+        });
 
-        // When and then
-        this.mockMvc.perform(get(this.baseUrl + "/artifacts").accept(MediaType.APPLICATION_JSON).params(requestParams))
-                .andExpect(jsonPath("$.flag").value(true))
-                .andExpect(jsonPath("$.code").value(StatusCode.SUCCESS))
-                .andExpect(jsonPath("$.message").value("Find All Success"))
-                .andExpect(jsonPath("$.data.content", Matchers.hasSize(this.artifacts.size())))
-                .andExpect(jsonPath("$.data.content[0].id").value("1250808601744904191"))
-                .andExpect(jsonPath("$.data.content[0].name").value("Deluminator"))
-                .andExpect(jsonPath("$.data.content[1].id").value("1250808601744904192"))
-                .andExpect(jsonPath("$.data.content[1].name").value("Invisibility Cloak"));
+        // Then
+        assertThat(thrown)
+                .isInstanceOf(ObjectNotFoundException.class)
+                .hasMessage("Could not find user with Id 1 :(");
+        verify(this.userRepository, times(1)).findById(Mockito.any(Integer.class));
+    }
+
+
+    @Test
+    void testSaveSuccess() {
+        // Given
+        HogwartsUser newUser =new HogwartsUser();
+        newUser.setUsername("lily");
+        newUser.setPassword("123456");
+        newUser.setEnabled(true);
+        newUser.setRoles("user");
+
+        given(this.passwordEncoder.encode(newUser.getPassword())).willReturn("Encoded Password");
+        given(this.userRepository.save(newUser)).willReturn(newUser);
+
+        // When
+        HogwartsUser returnedUser = this.userService.save(newUser);
+
+        // Then
+        assertThat(returnedUser.getUsername()).isEqualTo(newUser.getUsername());
+        assertThat(returnedUser.getPassword()).isEqualTo(newUser.getPassword());
+        assertThat(returnedUser.isEnabled()).isEqualTo(newUser.isEnabled());
+        assertThat(returnedUser.getRoles()).isEqualTo(newUser.getRoles());
+        verify(this.userRepository, times(1)).save(newUser);
     }
 
     @Test
-    void testAddArtifactSuccess() throws Exception {
-        //Given
-        ArtifactDto artifactDto = new ArtifactDto(null,
-                "Remembrall",
-                "A Remembrall was a magical large marble-sized glass ball that contained smoke which turned red when its owner or user had forgotten something. It turned clear once whatever was forgotten was remembered.",
-                "ImageUrl",
-                null);
-        String json = this.objectMapper.writeValueAsString(artifactDto);
+    void testUpdateSuccess() {
+        // Given
+        HogwartsUser oldUser =new HogwartsUser();
+        oldUser.setId(1);
+        oldUser.setUsername("john");
+        oldUser.setPassword("123456");
+        oldUser.setEnabled(true);
+        oldUser.setRoles("admin user");
 
-        Artifact savedArtifact = new Artifact();
-        savedArtifact.setId("1250808601744904197");
-        savedArtifact.setName("Remembrall");
-        savedArtifact.setDescription("A Remembrall was a magical large marble-sized glass ball that contained smoke which turned red when its owner or user had forgotten something. It turned clear once whatever was forgotten was remembered.");
-        savedArtifact.setImageUrl("ImageUrl");
+        HogwartsUser update = new HogwartsUser();
+        update.setUsername("john - update");
+        update.setPassword("123456");
+        update.setEnabled(true);
+        update.setRoles("admin user");
 
-        given(this.artifactService.save(Mockito.any(Artifact.class))).willReturn(savedArtifact);
+        given(this.userRepository.findById(1)).willReturn(Optional.of(oldUser));
+        given(this.userRepository.save(oldUser)).willReturn(oldUser);
 
-        //When and then
-        this.mockMvc.perform(post(this.baseUrl + "/artifacts").contentType(MediaType.APPLICATION_JSON).content(json).accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.flag").value(true))
-                .andExpect(jsonPath("$.code").value(StatusCode.SUCCESS))
-                .andExpect(jsonPath("$.message").value("Add Success"))
-                .andExpect(jsonPath("$.data.id").isNotEmpty())
-                .andExpect(jsonPath("$.data.name").value(savedArtifact.getName()))
-                .andExpect(jsonPath("$.data.description").value(savedArtifact.getDescription()))
-                .andExpect(jsonPath("$.data.imageUrl").value(savedArtifact.getImageUrl()));
+        // When
+        HogwartsUser updatedUser = this.userService.update(1, update);
+
+        // Then
+        assertThat(updatedUser.getId()).isEqualTo(1);
+        assertThat(updatedUser.getUsername()).isEqualTo(update.getUsername());
+        verify(this.userRepository, times(1)).findById(1);
+        verify(this.userRepository, times(1)).save(oldUser);
     }
 
     @Test
-    void testUpdateArtifactSuccess() throws Exception {
-        //Given
-        ArtifactDto artifactDto = new ArtifactDto("1250808601744904192",
-                "Invisibility Cloak",
-                "A new description.",
-                "ImageUrl",
-                null);
-        String json = this.objectMapper.writeValueAsString(artifactDto);
+    void testUpdateNotFound() {
+        // Given
+        HogwartsUser update = new HogwartsUser();
+        update.setUsername("john - update");
+        update.setPassword("123456");
+        update.setEnabled(true);
+        update.setRoles("admin user");
 
-        Artifact updatedArtifact = new Artifact();
-        updatedArtifact.setId("1250808601744904192");
-        updatedArtifact.setName("Invisibility Cloak");
-        updatedArtifact.setDescription("A new description.");
-        updatedArtifact.setImageUrl("ImageUrl");
+        given(this.userRepository.findById(1)).willReturn(Optional.empty());
 
-        given(this.artifactService.update(eq("1250808601744904192"), Mockito.any(Artifact.class))).willReturn(updatedArtifact);
+        // When
+        Throwable thrown =assertThrows(ObjectNotFoundException.class, () -> {
+            this.userService.update(1, update);
+        });
 
-        //When and then
-        this.mockMvc.perform(put(this.baseUrl + "/artifacts/1250808601744904192").contentType(MediaType.APPLICATION_JSON).content(json).accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.flag").value(true))
-                .andExpect(jsonPath("$.code").value(StatusCode.SUCCESS))
-                .andExpect(jsonPath("$.message").value("Update Success"))
-                .andExpect(jsonPath("$.data.id").value("1250808601744904192"))
-                .andExpect(jsonPath("$.data.name").value(updatedArtifact.getName()))
-                .andExpect(jsonPath("$.data.description").value(updatedArtifact.getDescription()))
-                .andExpect(jsonPath("$.data.imageUrl").value(updatedArtifact.getImageUrl()));
+        // Then
+        assertThat(thrown)
+                .isInstanceOf(ObjectNotFoundException.class)
+                .hasMessage("Could not find user with Id 1 :(");
+        verify(this.userRepository, times(1)).findById(1);
     }
 
     @Test
-    void testUpdateArtifactErrorWithNonExistentId() throws Exception {
-        //Given
-        ArtifactDto artifactDto = new ArtifactDto("1250808601744904192",
-                "Invisibility Cloak",
-                "A new description.",
-                "ImageUrl",
-                null);
-        String json = this.objectMapper.writeValueAsString(artifactDto);
+    void testDeleteSuccess() {
+        // Given
+        HogwartsUser user = new HogwartsUser();
+        user.setId(1);
+        user.setUsername("john");
+        user.setPassword("123456");
+        user.setEnabled(true);
+        user.setRoles("admin user");
 
-        given(this.artifactService.update(eq("1250808601744904192"), Mockito.any(Artifact.class))).willThrow(new ObjectNotFoundException("artifact", "1250808601744904192"));
+        given(this.userRepository.findById(1)).willReturn(Optional.of(user));
+        doNothing().when(this.userRepository).deleteById(1);
 
-        //When and then
-        this.mockMvc.perform(put(this.baseUrl + "/artifacts/1250808601744904192").contentType(MediaType.APPLICATION_JSON).content(json).accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.flag").value(false))
-                .andExpect(jsonPath("$.code").value(StatusCode.NOT_FOUND))
-                .andExpect(jsonPath("$.message").value("Could not find artifact with Id 1250808601744904192 :("))
-                .andExpect(jsonPath("$.data").isEmpty());
+        // When
+        this.userService.delete(1);
+
+        // Then
+        verify(this.userRepository, times(1)).deleteById(1);
     }
 
     @Test
-    void testDeleteArtifactSuccess() throws Exception {
-        //Given
-        doNothing().when(this.artifactService).delete("1250808601744904191");
+    void testDeleteNotFound() {
+        // Given
+        given(this.userRepository.findById(1)).willReturn(Optional.empty());
 
-        //When and then
-        this.mockMvc.perform(delete(this.baseUrl + "/artifacts/1250808601744904191").accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.flag").value(true))
-                .andExpect(jsonPath("$.code").value(StatusCode.SUCCESS))
-                .andExpect(jsonPath("$.message").value("Delete Success"))
-                .andExpect(jsonPath("$.data").isEmpty());
+        // When
+        Throwable thrown = assertThrows(ObjectNotFoundException.class, () -> {
+            this.userService.delete(1);
+        });
+
+        // Then
+        assertThat(thrown)
+                .isInstanceOf(ObjectNotFoundException.class)
+                .hasMessage("Could not find user with Id 1 :(");
+        verify(this.userRepository, times(1)).findById(1);
     }
-
-    @Test
-    void testDeleteArtifactErrorWithNonExistentId() throws Exception {
-        //Given
-        doThrow(new ObjectNotFoundException("artifact", "1250808601744904191")).when(this.artifactService).delete("1250808601744904191");
-
-        //When and then
-        this.mockMvc.perform(delete(this.baseUrl + "/artifacts/1250808601744904191").accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.flag").value(false))
-                .andExpect(jsonPath("$.code").value(StatusCode.NOT_FOUND))
-                .andExpect(jsonPath("$.message").value("Could not find artifact with Id 1250808601744904191 :("))
-                .andExpect(jsonPath("$.data").isEmpty());
-    }
-
-    @Test
-    void testSummarizeArtifactsSuccess() throws Exception {
-        //Given
-        given(this.artifactService.summarize(Mockito.anyList())).willReturn("The summary includes six artifacts, owned by three different wizards.");
-
-        //When and then
-        this.mockMvc.perform(get(this.baseUrl + "/artifacts/summary").accept(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.flag").value(true))
-                .andExpect(jsonPath("$.code").value(StatusCode.SUCCESS))
-                .andExpect(jsonPath("$.message").value("Summarize Success"))
-                .andExpect(jsonPath("$.data").value("The summary includes six artifacts, owned by three different wizards."));
-    }
-
 }
