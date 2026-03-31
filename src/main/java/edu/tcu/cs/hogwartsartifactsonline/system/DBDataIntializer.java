@@ -7,21 +7,16 @@ import edu.tcu.cs.hogwartsartifactsonline.hogwartsuser.UserService;
 import edu.tcu.cs.hogwartsartifactsonline.wizard.Wizard;
 import edu.tcu.cs.hogwartsartifactsonline.wizard.WizardRepository;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("dev")
-public class DBDataInitializer implements CommandLineRunner {
+public class DBDataIntializer implements CommandLineRunner {
 
     private final ArtifactRepository artifactRepository;
-
     private final WizardRepository wizardRepository;
-
     private final UserService userService;
 
-
-    public DBDataInitializer(ArtifactRepository artifactRepository, WizardRepository wizardRepository, UserService userService) {
+    public DBDataIntializer(ArtifactRepository artifactRepository, WizardRepository wizardRepository, UserService userService) {
         this.artifactRepository = artifactRepository;
         this.wizardRepository = wizardRepository;
         this.userService = userService;
@@ -69,7 +64,6 @@ public class DBDataInitializer implements CommandLineRunner {
         w1.setName("Albus Dumbledore");
         w1.addArtifact(a1);
         w1.addArtifact(a3);
-        // Don't manually set the id for the wizard, let the database generate it.
 
         Wizard w2 = new Wizard();
         w2.setName("Harry Potter");
@@ -86,13 +80,11 @@ public class DBDataInitializer implements CommandLineRunner {
 
         artifactRepository.save(a6);
 
-        // Create some users.
         HogwartsUser u1 = new HogwartsUser();
         u1.setUsername("john");
         u1.setPassword("123456");
         u1.setEnabled(true);
         u1.setRoles("admin user");
-        // Don't manually set the id for the user, let the database generate it.
 
         HogwartsUser u2 = new HogwartsUser();
         u2.setUsername("eric");
