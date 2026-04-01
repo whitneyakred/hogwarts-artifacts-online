@@ -10,7 +10,7 @@ import java.util.Collection;
 
 public class MyUserPrincipal implements UserDetails {
 
-    private final HogwartsUser hogwartsUser;
+    private HogwartsUser hogwartsUser;
 
 
     public MyUserPrincipal(HogwartsUser hogwartsUser) {
@@ -19,9 +19,6 @@ public class MyUserPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Convert a user's roles from space-delimited string to a list of SimpleGrantedAuthority objects.
-        // E.g., john's roles are stored in a string like "admin user moderator", we need to convert it to a list of GrantedAuthority.
-        // Before conversion, we need to add this "ROLE_" prefix to each role name.
         return Arrays.stream(StringUtils.tokenizeToStringArray(this.hogwartsUser.getRoles(), " "))
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                 .toList();
