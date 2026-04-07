@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Profile("dev")
-public class DBDataInitializer implements CommandLineRunner {
+public class DBDataIntializer implements CommandLineRunner {
 
     private final ArtifactRepository artifactRepository;
 
@@ -21,7 +21,7 @@ public class DBDataInitializer implements CommandLineRunner {
     private final UserService userService;
 
 
-    public DBDataInitializer(ArtifactRepository artifactRepository, WizardRepository wizardRepository, UserService userService) {
+    public DBDataIntializer(ArtifactRepository artifactRepository, WizardRepository wizardRepository, UserService userService) {
         this.artifactRepository = artifactRepository;
         this.wizardRepository = wizardRepository;
         this.userService = userService;
